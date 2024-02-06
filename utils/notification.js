@@ -1,0 +1,42 @@
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin SDK (replace with your own service account key)
+const serviceAccount = require('path/to/your/serviceAccountKey.json');
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+});
+
+// Function to send queue notifications to users
+const sendQueueNotification = async (users, message) => {
+    const registrationTokens = users.map(user => user.fcmToken).filter(Boolean);
+
+    if (registrationTokens.length === 0) {
+        console.log('No registration tokens found. Notifications not sent.');
+        return;
+    }
+
+    const payload = {
+        notification: {
+            title: 'Queue Notification',
+            body: message,
+        },
+    };
+
+    try {
+        const response = await admin.messaging().sendToDevice(registrationTokens, payload);
+
+        // Handle the response
+        response.results.forEach((result, index) => {
+            const error = result.error;
+            if (error) {
+                console.error(`Failed to send notification to ${users[index].name}:`, error);
+            } else {
+                console.log(`Notification sent successfully to ${users[index].name}`);
+            }
+        });
+    } catch (error) {
+        console.error('Error sending notifications:', error);
+    }
+};
+
+module.exports = { sendQueueNotification };
